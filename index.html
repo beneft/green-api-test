@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Green-API Test</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+    .container { display: flex; gap: 20px; }
+    .left, .right { flex: 1; }
+    input, button, textarea, label { width: 100%; margin-top: 3px; margin-bottom: 3px}
+    input, textarea { padding: 8px; }
+    button { padding: 10px; margin-top: 10px; cursor: pointer; }
+    #response { height: 500px; }
+    .section { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+
+<h1>Green-API Test</h1>
+
+<div class="container">
+  <div class="left">
+    <div class="section">
+      <label>ID Instance:</label>
+      <input type="text" id="idInstance" placeholder="Введите idInstance">
+      <label>API Token Instance:</label>
+      <input type="password" id="apiTokenInstance" placeholder="Введите ApiTokenInstance">
+    </div>
+
+    <div class="section">
+      <button onclick="callMethod('getSettings')">getSettings</button>
+      <button onclick="callMethod('getStateInstance')">getStateInstance</button>
+    </div>
+
+    <div class="section">
+      <label>Номер телефона:</label>
+      <input type="text" id="phoneNumber">
+      <label>Сообщение:</label>
+      <textarea id="messageText" maxlength="20000"></textarea>
+      <button onclick="sendMessage()">sendMessage</button>
+    </div>
+
+    <div class="section">
+      <label>URL файла:</label>
+      <input type="text" id="fileUrl">
+      <label>Имя файла (с расширением):</label>
+      <input type="text" id="fileName">
+      <label>Номер получателя:</label>
+      <input type="text" id="filePhone">
+      <button onclick="sendFile()">sendFileByUrl</button>
+    </div>
+  </div>
+
+  <div class="right">
+    <label>Ответ API:</label>
+    <textarea id="response" readonly></textarea>
+  </div>
+</div>
+
+<script>
+  function getAuth() {
+    const id = document.getElementById('idInstance').value.trim();
+    const token = document.getElementById('apiTokenInstance').value.trim();
+    if (!id || !token) {
+      alert("Введите idInstance и apiTokenInstance");
+      return null;
+    }
+    return { id, token };
+  }
+
+  function showResponse(data) {
+    document.getElementById('response').value = JSON.stringify(data, null, 2);
+  }
+
+  function callMethod(method) {
+    const auth = getAuth();
+    if (!auth) return;
+
+    const url = `https://api.green-api.com/waInstance${auth.id}/${method}/${auth.token}`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => showResponse(data))
+      .catch(err => showResponse({ error: err.message }));
+  }
+
+  function sendMessage() {
+    const auth = getAuth();
+    if (!auth) return;
+
+    const phone = document.getElementById('phoneNumber').value.trim();
+    const message = document.getElementById('messageText').value.trim();
+
+    if (!/^\d{11}$/.test(phone)) {
+      alert("Введите корректный номер телефона (11 цифр, например: 77051234567)");
+      return;
+    }
+
+    if (!message) {
+      alert("Введите сообщение");
+      return;
+    }
+
+    fetch(`https://api.green-api.com/waInstance${auth.id}/sendMessage/${auth.token}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=UTF-8" },
+      body: JSON.stringify({
+        chatId: phone + "@c.us",
+        message: message
+      })
+    })
+      .then(res => res.json())
+      .then(data => showResponse(data))
+      .catch(err => showResponse({ error: err.message }));
+  }
+
+  function sendFile() {
+    const auth = getAuth();
+    if (!auth) return;
+
+    const phone = document.getElementById('filePhone').value.trim();
+    const fileUrl = document.getElementById('fileUrl').value.trim();
+    const fileName = document.getElementById('fileName').value.trim();
+
+    // const urlPattern = /^[a-zA-Z0-9-_/:.]+$/;
+
+    if (!/^\d{11}$/.test(phone)) {
+      alert("Введите корректный номер телефона");
+      return;
+    }
+
+    // if (!fileUrl || !urlPattern.test(fileUrl)) {
+    //   alert("Ссылка должна быть прямой, без спецсимволов и пробелов");
+    //   return;
+    // }
+
+    if (!fileName || !fileName.match(/^[a-zA-Z0-9А-Яа-я-_.]+\.[a-zA-Z0-9]{2,5}$/)) {
+      alert("Введите корректное имя файла с расширением (пример: mydoc.pdf)");
+      return;
+    }
+
+    fetch(`https://api.green-api.com/waInstance${auth.id}/sendFileByUrl/${auth.token}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=UTF-8" },
+      body: JSON.stringify({
+        chatId: phone + "@c.us",
+        urlFile: fileUrl,
+        fileName: fileName
+      })
+    })
+      .then(res => res.json())
+      .then(data => showResponse(data))
+      .catch(err => showResponse({ error: err.message }));
+  }
+</script>
+
+</body>
+</html>
